@@ -58,15 +58,25 @@ def health() -> Dict[str, str]:
     return {"status": "healthy"}
 
 
+from fastapi import Request
+
 @app.post("/reset")
-def reset(request: ResetRequest) -> Dict[str, Any]:
+async def reset(request: Request) -> Dict[str, Any]:
     """
     Initialize a new incident episode.
     POST /reset {"task_name": "memory_leak", "seed": 42}
     """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+        
+    if not isinstance(body, dict):
+        body = {}
+        
     result = env.reset(
-        task_name=request.task_name,
-        seed=request.seed,
+        task_name=body.get("task_name"),
+        seed=body.get("seed"),
     )
     return result
 
