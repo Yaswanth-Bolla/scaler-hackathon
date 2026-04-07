@@ -24,3 +24,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["incident_env*"]
+
+[project.scripts]
+server = "incident_env.server.app:main"
+

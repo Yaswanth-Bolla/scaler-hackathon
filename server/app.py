@@ -119,3 +119,11 @@ def list_tasks() -> Dict[str, Any]:
             "time_budget_minutes": scenario.time_budget_minutes,
         }
     return {"tasks": tasks}
+
+def main():
+    import uvicorn
+    uvicorn.run("incident_env.server.app:app", host="0.0.0.0", port=8000, reload=False)
+
+if __name__ == "__main__":
+    main()
+
