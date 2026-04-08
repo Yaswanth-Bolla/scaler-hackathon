@@ -151,7 +151,7 @@ curl -X POST http://localhost:8000/step -H "Content-Type: application/json" -d '
 ```bash
 export OPENAI_API_KEY=sk-...
 export MODEL_NAME=gpt-4o-mini
-export API_BASE_URL=http://localhost:8000
+export ENV_BASE_URL=http://localhost:8000
 
 python inference.py
 ```

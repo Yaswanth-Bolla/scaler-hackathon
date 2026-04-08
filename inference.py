@@ -26,7 +26,7 @@ from openai import OpenAI
 # Config
 # ------------------------------------------------------------------
 
-API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
+ENV_BASE_URL = os.environ.get("ENV_BASE_URL", "http://localhost:8000")
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-mini")
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
@@ -112,10 +112,10 @@ class EnvClient:
 def create_openai_client() -> OpenAI:
     """Create OpenAI client with appropriate config."""
     api_key = OPENAI_API_KEY or HF_TOKEN or "no-key"
-    base_url = None
+    base_url = os.environ.get("API_BASE_URL")
 
     # If using HF inference endpoint, set base_url
-    if HF_TOKEN and not OPENAI_API_KEY:
+    if HF_TOKEN and not OPENAI_API_KEY and not base_url:
         base_url = f"https://api-inference.huggingface.co/models/{MODEL_NAME}/v1"
 
     return OpenAI(api_key=api_key, base_url=base_url)
@@ -269,10 +269,10 @@ def main():
     print("=" * 60)
     print("SRE Incident Response — OpenEnv Inference")
     print(f"Model: {MODEL_NAME}")
-    print(f"Environment: {API_BASE_URL}")
+    print(f"Environment: {ENV_BASE_URL}")
     print("=" * 60)
 
-    env = EnvClient(API_BASE_URL)
+    env = EnvClient(ENV_BASE_URL)
     llm = create_openai_client()
 
     results = []
