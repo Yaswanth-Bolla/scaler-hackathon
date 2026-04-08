@@ -29,7 +29,7 @@ from openai import OpenAI
 ENV_BASE_URL = os.environ.get("ENV_BASE_URL", "http://localhost:8000")
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-mini")
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+API_KEY = os.environ.get("API_KEY", "")
 MAX_STEPS = 20
 TEMPERATURE = 0.3
 
@@ -111,11 +111,11 @@ class EnvClient:
 
 def create_openai_client() -> OpenAI:
     """Create OpenAI client with appropriate config."""
-    api_key = OPENAI_API_KEY or HF_TOKEN or "no-key"
+    api_key = API_KEY or HF_TOKEN or "no-key"
     base_url = os.environ.get("API_BASE_URL")
 
     # If using HF inference endpoint, set base_url
-    if HF_TOKEN and not OPENAI_API_KEY and not base_url:
+    if HF_TOKEN and not API_KEY and not base_url:
         base_url = f"https://api-inference.huggingface.co/models/{MODEL_NAME}/v1"
 
     return OpenAI(api_key=api_key, base_url=base_url)
