@@ -112,7 +112,7 @@ class BaseScenario(ABC):
         score += self._grade_remediation(trajectory)        # 0.00 – 0.30
         score += self._grade_efficiency(trajectory)         # 0.00 – 0.20
         score += self._grade_restoration(trajectory)        # 0.00 – 0.10
-        return max(0.0, min(1.0, score))
+        return max(0.01, min(0.99, score))
 
     def _grade_root_cause(self, trajectory: List[StepRecord]) -> float:
         """
