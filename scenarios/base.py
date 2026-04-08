@@ -101,27 +101,36 @@ class BaseScenario(ABC):
     def grade(self, trajectory: List[StepRecord]) -> float:
         """
         Grade the complete trajectory.
-        Returns float in [0.0, 1.0].
+        Returns float in [0.01, 0.99].
 
         This function receives ONLY the step records — no hidden state,
         no infrastructure reference. This is critical: the evaluation
         harness must be able to call this on a saved trajectory.
         """
+        import math
+        
         score = 0.0
         score += self._grade_root_cause(trajectory)        # 0.00 – 0.40
         score += self._grade_remediation(trajectory)        # 0.00 – 0.30
         score += self._grade_efficiency(trajectory)         # 0.00 – 0.20
         score += self._grade_restoration(trajectory)        # 0.00 – 0.10
-        # Ensure score is strictly open interval (0, 1) to pass OpenEnv validation via affine transform
-        adjusted_score = 0.01 + (score * 0.98)
         
-        # Explicit boundary enforcement
-        if adjusted_score <= 0.0:
+        # Final safety check for NaN/Inf
+        if not math.isfinite(score):
+            score = 0.0
+            
+        # Ensure score is strictly open interval (0, 1) to pass OpenEnv validation via affine transform
+        # We target [0.01, 0.99] to stay safely away from boundaries
+        adjusted_score = 0.01 + (min(max(float(score), 0.0), 1.0) * 0.98)
+        
+        # Explicit boundary enforcement for absolute certainty
+        if adjusted_score <= 0.001:
             return 0.01
-        if adjusted_score >= 1.0:
+        if adjusted_score >= 0.999:
             return 0.99
             
-        return float(adjusted_score)
+        return float(round(adjusted_score, 4))
+
 
     def _grade_root_cause(self, trajectory: List[StepRecord]) -> float:
         """

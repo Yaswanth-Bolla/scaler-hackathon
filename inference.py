@@ -242,17 +242,17 @@ def run_episode(
 
     # Get final state
     final_state = env.state()
-    final_grade = final_info.get("final_grade", 0.01)
+    score = final_info.get("score", 0.01)
 
     # --- [END] ---
     print(f"[END] task={task_name} "
-          f"grade={final_grade:.3f} "
+          f"score={score:.3f} "
           f"reward={episode_reward:.3f} "
           f"steps={final_state.get('step_count', 0)}")
 
     return {
         "task_name": task_name,
-        "final_grade": final_grade,
+        "score": score,
         "cumulative_reward": episode_reward,
         "steps": final_state.get("step_count", 0),
         "declared_root_cause": final_state.get("declared_root_cause"),
@@ -289,7 +289,7 @@ def main():
             traceback.print_exc()
             results.append({
                 "task_name": task,
-                "final_grade": 0.01,
+                "score": 0.01,
                 "cumulative_reward": 0.0,
                 "steps": 0,
                 "error": str(e),
@@ -300,12 +300,13 @@ def main():
     print("RESULTS SUMMARY")
     print(f"{'=' * 60}")
     for r in results:
-        print(f"  {r['task_name']:30s}  grade={r.get('final_grade', 0):.3f}  "
+        score = r.get("score", 0.01)
+        print(f"  {r['task_name']:30s}  score={score:.3f}  "
               f"steps={r.get('steps', 0):2d}  "
               f"root_cause={r.get('declared_root_cause', 'N/A')}")
 
-    avg_grade = sum(r.get("final_grade", 0) for r in results) / len(results)
-    print(f"\n  {'AVERAGE':30s}  grade={avg_grade:.3f}")
+    avg_score = sum(r.get("score", 0) for r in results) / len(results)
+    print(f"\n  {'AVERAGE':30s}  score={avg_score:.3f}")
     print(f"{'=' * 60}")
 
 

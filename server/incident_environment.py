@@ -111,7 +111,7 @@ class IncidentEnvironment:
 
         return {
             "observation": obs,
-            "reward": 0.0,
+            "reward": 0.01,
             "done": False,
         }
 
@@ -137,7 +137,7 @@ class IncidentEnvironment:
                 reward=0.0,
             )
             final_grade = self._scenario.grade(self._trajectory) if self._scenario else 0.01
-            return {"observation": obs, "reward": 0.0, "done": True, "info": {"final_grade": final_grade}}
+            return {"observation": obs, "reward": 0.01, "done": True, "info": {"score": final_grade}}
 
         if self._infra is None or self._scenario is None:
             obs = self._build_observation(
@@ -146,7 +146,7 @@ class IncidentEnvironment:
                 action_message="Not initialized",
                 reward=0.0,
             )
-            return {"observation": obs, "reward": 0.0, "done": False, "info": {}}
+            return {"observation": obs, "reward": 0.01, "done": False, "info": {}}
 
         # Parse action
         action = IncidentAction(
@@ -207,7 +207,7 @@ class IncidentEnvironment:
         if done:
             # Compute final grade (oracle-independent)
             final_grade = self._scenario.grade(self._trajectory)
-            info["final_grade"] = final_grade
+            info["score"] = final_grade
             info["task_name"] = self._scenario.task_name
             info["steps_taken"] = self._state.step_count
             info["trajectory_length"] = len(self._trajectory)

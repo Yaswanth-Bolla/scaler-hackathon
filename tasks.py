@@ -44,13 +44,7 @@ def grade_trajectory(task_name: str, trajectory: List[StepRecord]) -> float:
     This is the evaluation entry point — standalone, no hidden state.
     """
     scenario = get_scenario(task_name)
+    # scenario.grade() now handles its own [0.01, 0.99] adjustment
     score = scenario.grade(trajectory)
-    adjusted_score = 0.01 + (float(score) * 0.98)
-    
-    # Explicit boundary enforcement
-    if adjusted_score <= 0.0:
-        return 0.01
-    if adjusted_score >= 1.0:
-        return 0.99
-        
-    return float(adjusted_score)
+    return float(score)
+
