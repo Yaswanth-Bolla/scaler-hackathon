@@ -136,7 +136,8 @@ class IncidentEnvironment:
                 action_message="Episode already finished",
                 reward=0.0,
             )
-            return {"observation": obs, "reward": 0.0, "done": True, "info": {}}
+            final_grade = self._scenario.grade(self._trajectory) if self._scenario else 0.01
+            return {"observation": obs, "reward": 0.0, "done": True, "info": {"final_grade": final_grade}}
 
         if self._infra is None or self._scenario is None:
             obs = self._build_observation(

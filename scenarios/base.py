@@ -112,7 +112,16 @@ class BaseScenario(ABC):
         score += self._grade_remediation(trajectory)        # 0.00 – 0.30
         score += self._grade_efficiency(trajectory)         # 0.00 – 0.20
         score += self._grade_restoration(trajectory)        # 0.00 – 0.10
-        return max(0.01, min(0.99, score))
+        # Ensure score is strictly open interval (0, 1) to pass OpenEnv validation via affine transform
+        adjusted_score = 0.01 + (score * 0.98)
+        
+        # Explicit boundary enforcement
+        if adjusted_score <= 0.0:
+            return 0.01
+        if adjusted_score >= 1.0:
+            return 0.99
+            
+        return float(adjusted_score)
 
     def _grade_root_cause(self, trajectory: List[StepRecord]) -> float:
         """

@@ -45,4 +45,12 @@ def grade_trajectory(task_name: str, trajectory: List[StepRecord]) -> float:
     """
     scenario = get_scenario(task_name)
     score = scenario.grade(trajectory)
-    return max(0.01, min(0.99, float(score)))
+    adjusted_score = 0.01 + (float(score) * 0.98)
+    
+    # Explicit boundary enforcement
+    if adjusted_score <= 0.0:
+        return 0.01
+    if adjusted_score >= 1.0:
+        return 0.99
+        
+    return float(adjusted_score)
