@@ -242,7 +242,7 @@ def run_episode(
 
     # Get final state
     final_state = env.state()
-    final_grade = final_info.get("final_grade", 0.0)
+    final_grade = final_info.get("final_grade", 0.01)
 
     # --- [END] ---
     print(f"[END] task={task_name} "
@@ -289,7 +289,7 @@ def main():
             traceback.print_exc()
             results.append({
                 "task_name": task,
-                "final_grade": 0.0,
+                "final_grade": 0.01,
                 "cumulative_reward": 0.0,
                 "steps": 0,
                 "error": str(e),
