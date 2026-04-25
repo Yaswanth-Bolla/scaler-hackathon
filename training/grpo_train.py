@@ -26,11 +26,17 @@ Usage (local, from repo root):
 HF Jobs (`hf jobs uv run`) often uploads **only the script file** to `/`,
 so `server/` is missing → `ModuleNotFoundError: server`.  Fix by either:
 
-  A) Clone the full repo inside the job, then run from that directory, e.g.:
-     hf jobs uv run --flavor h200 ... -- bash -lc '
+  A) Clone the full repo inside the job, then run from that directory.
+
+     **Trap:** ``bash -lc`` often resets ``PATH`` so ``python`` is *not* the
+     same interpreter that ``hf jobs uv run`` installed ``torch`` into →
+     ``ModuleNotFoundError: torch``.  Prefer ``bash -ec`` (no login) **or**
+     nest ``uv run`` after ``cd`` so deps apply to the training process:
+
+     hf jobs uv run --flavor h200 ... -- bash -ec '
        git clone https://github.com/<you>/scaler-hackathon.git /tmp/repo &&
-       cd /tmp/repo &&
-       python training/grpo_train.py --model ... ...
+       cd /tmp/repo && git checkout <branch> &&
+       uv run --no-project --with torch --with transformers --with accelerate --with peft --with bitsandbytes --with tqdm --with fastapi --with uvicorn --with pydantic python training/grpo_train.py --model ... ...
      '
 
   B) Set an explicit root (if your job packs the tree elsewhere):
@@ -103,14 +109,46 @@ def _find_repo_root() -> Path:
     )
 
 _REPO = _find_repo_root()
-if str(_REPO) not in sys.path:
-    sys.path.insert(0, str(_REPO))
 
-from server.incident_environment import IncidentEnvironment          # noqa: E402
-from tasks import compute_r_cross                                    # noqa: E402
-from pools import POOLS, sample_task                                 # noqa: E402
-from training.curriculum import CurriculumConfig, CurriculumRunner   # noqa: E402
-from training.segment_grpo import GRPOGroup, Segment, grpo_advantages  # noqa: E402
+
+def _register_incident_env_pkg(repo: Path) -> None:
+    """
+    The repo is laid out as a *single* installable tree (``models.py``,
+    ``server/``, ``scenarios/``, …) but **without** a physical ``incident_env/``
+    directory.  Subpackages use relative imports (e.g. ``from ..models`` in
+    ``server/``), so they must be loaded as ``incident_env.server``, not as a
+    bare top-level ``server`` (which breaks ``..``).
+
+    Register a synthetic parent package ``incident_env`` whose ``__path__`` is
+    the repository root.  Then import only ``incident_env.*`` below.
+    """
+    import importlib.machinery
+    import types
+
+    root = repo.resolve()
+    root_s = str(root)
+    name = "incident_env"
+
+    existing = sys.modules.get(name)
+    if existing is not None and getattr(existing, "__path__", None):
+        return
+
+    pkg = types.ModuleType(name)
+    pkg.__path__ = [root_s]
+    spec = importlib.machinery.ModuleSpec(name, loader=None, is_package=True)
+    spec.submodule_search_locations = [root_s]
+    pkg.__spec__ = spec
+    pkg.__package__ = name
+    sys.modules[name] = pkg
+
+
+_register_incident_env_pkg(_REPO)
+
+from incident_env.server.incident_environment import IncidentEnvironment          # noqa: E402
+from incident_env.tasks import compute_r_cross                                    # noqa: E402
+from incident_env.pools import POOLS, sample_task                                 # noqa: E402
+from incident_env.training.curriculum import CurriculumConfig, CurriculumRunner   # noqa: E402
+from incident_env.training.segment_grpo import GRPOGroup, Segment, grpo_advantages  # noqa: E402
 
 
 # ──────────────────────────────────────────────────────────────────────
