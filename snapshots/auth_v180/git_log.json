@@ -1,0 +1,32 @@
+[
+  {
+    "sha": "b8e2d44",
+    "author": "bob",
+    "date": "2025-01-15T13:55:00Z",
+    "message": "Config update: rotate JWT signing secret + dev fallback (v1.8.0)\n\nAdds a baked-in dev secret as a fallback when JWT_SECRET is unset. The\nintent is to make local dev work without a .env file. Note: the env-check\nthat would have gated this in prod was lost in rebase — see CR-2014.",
+    "files": [
+      "auth/config.py"
+    ]
+  },
+  {
+    "sha": "55cb7a9",
+    "author": "alice",
+    "date": "2025-01-13T11:00:00Z",
+    "message": "Add TokenService.issue() + .validate() roundtrip tests",
+    "files": [
+      "auth/token.py"
+    ]
+  },
+  {
+    "sha": "0a4ee10",
+    "author": "alice",
+    "date": "2025-01-08T09:00:00Z",
+    "message": "Initial auth service skeleton",
+    "files": [
+      "auth/__init__.py",
+      "auth/config.py",
+      "auth/token.py",
+      "auth/server.py"
+    ]
+  }
+]

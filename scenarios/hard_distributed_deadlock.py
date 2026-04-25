@@ -18,6 +18,8 @@ import random
 from typing import Dict, List, Set
 
 from .base import BaseScenario
+from .code_context_builder import DISTRIBUTED_DEADLOCK_CODE_CONTEXT
+from ..models import CodeContext
 from ..simulation.infrastructure import Infrastructure
 from ..simulation.service import Deploy
 from ..simulation.metrics import generate_high_latency_history, generate_healthy_history
@@ -28,6 +30,14 @@ class DistributedDeadlockScenario(BaseScenario):
     @property
     def task_name(self) -> str:
         return "distributed_deadlock"
+
+    @property
+    def code_context(self) -> CodeContext:
+        return DISTRIBUTED_DEADLOCK_CODE_CONTEXT
+
+    @property
+    def fault_class(self) -> str:
+        return "deadlock"
 
     @property
     def display_name(self) -> str:

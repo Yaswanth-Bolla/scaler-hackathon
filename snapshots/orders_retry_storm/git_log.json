@@ -1,0 +1,23 @@
+[
+  {
+    "sha":     "f8c9b13",
+    "author":  "carol",
+    "date":    "2026-04-25T14:01:00Z",
+    "message": "resilience(orders): bump auth-client retries 3 -> 20",
+    "files":   ["orders/auth_client.py"]
+  },
+  {
+    "sha":     "d09a4f1",
+    "author":  "frankie",
+    "date":    "2026-04-25T14:03:00Z",
+    "message": "resilience(orders): bump auth-client retries 3 -> 25 with no jitter",
+    "files":   ["orders/auth_client.py"]
+  },
+  {
+    "sha":     "7b1aa90",
+    "author":  "carol",
+    "date":    "2026-04-21T09:30:00Z",
+    "message": "Initial auth-client implementation",
+    "files":   ["orders/auth_client.py"]
+  }
+]

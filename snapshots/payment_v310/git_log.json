@@ -1,0 +1,33 @@
+[
+  {
+    "sha": "c5a1f77",
+    "author": "charlie",
+    "date": "2025-01-15T13:48:00Z",
+    "message": "Improve payment reliability: increase retry count, drop backoff (v3.1.0)\n\nUnder high failure rates the previous exponential-backoff was too slow\nto recover. Bumps retry_count 3 -> 10 and removes the time.sleep() so\nretries fire as fast as the queue can accept them.",
+    "files": [
+      "payment/processor.py"
+    ]
+  },
+  {
+    "sha": "44d3e90",
+    "author": "alice",
+    "date": "2025-01-13T08:10:00Z",
+    "message": "Add QueueClient.ack polling stub",
+    "files": [
+      "payment/queue_client.py"
+    ]
+  },
+  {
+    "sha": "2bb01af",
+    "author": "alice",
+    "date": "2025-01-09T14:30:00Z",
+    "message": "Initial payment processor + gateway scaffolding",
+    "files": [
+      "payment/__init__.py",
+      "payment/processor.py",
+      "payment/gateway.py",
+      "payment/queue_client.py",
+      "payment/txn.py"
+    ]
+  }
+]

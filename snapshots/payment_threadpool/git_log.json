@@ -1,0 +1,16 @@
+[
+  {
+    "sha":     "11abf04",
+    "author":  "dave",
+    "date":    "2026-04-25T13:35:00Z",
+    "message": "refactor(payment): drop global order, hold per-row locks directly",
+    "files":   ["payment/threadpool.py"]
+  },
+  {
+    "sha":     "660ff21",
+    "author":  "dave",
+    "date":    "2026-04-21T14:02:00Z",
+    "message": "Initial PoolWorker implementation",
+    "files":   ["payment/threadpool.py"]
+  }
+]

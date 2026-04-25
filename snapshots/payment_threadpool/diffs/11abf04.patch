@@ -1,0 +1,10 @@
+diff --git a/payment/threadpool.py b/payment/threadpool.py
+--- a/payment/threadpool.py
++++ b/payment/threadpool.py
+@@ -8,4 +8,5 @@ class PoolWorker:
+     def acquire(self):
+-        self._lock_a.acquire()
+-        self._lock_b.acquire()
++        with self._global_order:
++            self._lock_a.acquire()
++            self._lock_b.acquire()

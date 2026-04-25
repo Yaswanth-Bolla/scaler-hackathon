@@ -1,0 +1,8 @@
+diff --git a/orders/auth_client.py b/orders/auth_client.py
+--- a/orders/auth_client.py
++++ b/orders/auth_client.py
+@@ -15,5 +15,6 @@ class AuthClient:
+     def validate(self, token):
+-        return self._call_with_retries(token, retries=20)
++        return self._call_with_retries(token, retries=2,
++                                        backoff_seconds=0.5)

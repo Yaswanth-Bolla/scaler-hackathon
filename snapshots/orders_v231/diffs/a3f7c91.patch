@@ -1,0 +1,50 @@
+diff --git a/orders/handlers/batch.py b/orders/handlers/batch.py
+new file mode 100644
+--- /dev/null
++++ b/orders/handlers/batch.py
+@@ -0,0 +1,52 @@
++"""Batched order processor."""
++
++from __future__ import annotations
++
++from typing import Iterable
++
++from ..models import Order
++from ..storage import OrderStore
++from ..notifier import Notifier
++
++
++class BatchProcessor:
++    def __init__(self, store, notifier, batch_size=100):
++        self._store      = store
++        self._notifier   = notifier
++        self._batch_size = batch_size
++        self._cache: dict[str, Order] = {}
++
++    def submit(self, order):
++        self._cache[order.id] = order
++        if len(self._cache) >= self._batch_size:
++            self.flush()
++
++    def flush(self):
++        orders = list(self._cache.values())
++        self._store.persist_many(orders)
++        self._notify(orders)
++
++    def submit_many(self, orders):
++        for order in orders:
++            self._cache[order.id] = order
++        self._notify(orders)
++
++    def _notify(self, orders):
++        for order in orders:
++            self._notifier.send(order.id, "submitted")
+diff --git a/orders/handlers/__init__.py b/orders/handlers/__init__.py
+--- a/orders/handlers/__init__.py
++++ b/orders/handlers/__init__.py
+@@ -1,3 +1,4 @@
+ from .single import SingleOrderHandler
++from .batch import BatchProcessor
+ 
+-__all__ = ["SingleOrderHandler"]
++__all__ = ["SingleOrderHandler", "BatchProcessor"]

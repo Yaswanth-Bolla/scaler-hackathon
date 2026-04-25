@@ -12,6 +12,8 @@ import random
 from typing import Dict, List, Set
 
 from .base import BaseScenario
+from .code_context_builder import MEMORY_LEAK_CODE_CONTEXT
+from ..models import CodeContext
 from ..simulation.infrastructure import Infrastructure
 from ..simulation.service import Deploy
 from ..simulation.metrics import generate_memory_leak_history
@@ -21,6 +23,14 @@ class MemoryLeakScenario(BaseScenario):
 
     @property
     def task_name(self) -> str:
+        return "memory_leak"
+
+    @property
+    def code_context(self) -> CodeContext:
+        return MEMORY_LEAK_CODE_CONTEXT
+
+    @property
+    def fault_class(self) -> str:
         return "memory_leak"
 
     @property

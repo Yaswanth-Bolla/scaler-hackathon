@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 
 class ActionType(str, Enum):
     """Level-1 action categories — what kind of operation."""
+    # ---- Phase 1: ops / SRE ---------------------------------------
     VIEW_ALERTS = "view_alerts"
     QUERY_LOGS = "query_logs"
     CHECK_METRICS = "check_metrics"
@@ -28,6 +29,20 @@ class ActionType(str, Enum):
     ROLLBACK_DEPLOY = "rollback_deploy"
     SCALE_SERVICE = "scale_service"
     DECLARE_ROOT_CAUSE = "declare_root_cause"
+
+    # ---- Cross-phase control -------------------------------------
+    TRANSITION_TO_PHASE2 = "transition_to_phase2"
+
+    # ---- Phase 2: codebase exploration ---------------------------
+    READ_FILE = "read_file"
+    SEARCH_CODE = "search_code"
+    LIST_DIR = "list_dir"
+    GET_GIT_LOG = "get_git_log"
+    GET_FILE_DIFF = "get_file_diff"
+
+    # ---- Phase 2: terminal --------------------------------------
+    PROPOSE_PATCH = "propose_patch"
+    DECLARE_NO_CHANGE = "declare_no_change"
 
 
 # Actions that require a target_service (Level 2 — where to apply)
@@ -59,6 +74,62 @@ REMEDIATION_ACTIONS = {
     ActionType.SCALE_SERVICE,
 }
 
+# ---- Phase classification ------------------------------------------
+PHASE1_ACTIONS = (
+    DIAGNOSTIC_ACTIONS
+    | REMEDIATION_ACTIONS
+    | {ActionType.DECLARE_ROOT_CAUSE}
+)
+
+PHASE2_DIAGNOSTIC_ACTIONS = {
+    ActionType.LIST_DIR,
+    ActionType.READ_FILE,
+    ActionType.SEARCH_CODE,
+    ActionType.GET_GIT_LOG,
+    ActionType.GET_FILE_DIFF,
+}
+
+PHASE2_TERMINAL_ACTIONS = {
+    ActionType.PROPOSE_PATCH,
+    ActionType.DECLARE_NO_CHANGE,
+}
+
+PHASE2_ACTIONS = PHASE2_DIAGNOSTIC_ACTIONS | PHASE2_TERMINAL_ACTIONS
+
+# Cross-phase control action — only legal when transitioning P1 → P2
+CONTROL_ACTIONS = {ActionType.TRANSITION_TO_PHASE2}
+
+@dataclass
+class BeliefState:
+    """
+    Structured scratchpad the orchestrator emits before each transition decision.
+    Making this explicit (not implicit in hidden states) lets us:
+      - supervise confidence calibration with auxiliary loss
+      - audit stopping criterion decisions
+      - compute consistency losses (e.g. empty gaps + low confidence = incoherent)
+    """
+    suspected_service: Optional[str] = None
+    suspected_fault_class: Optional[str] = None   # "memory_leak" | "config_change" | "deadlock" | "none"
+    service_confidence: float = 0.0               # [0, 1] — calibrated against ground truth in Stage 2
+    fault_confidence: float = 0.0                 # [0, 1]
+    evidence_gaps: List[str] = field(default_factory=list)  # e.g. ["deploy_history_unchecked"]
+    estimated_p2_cost: str = "unknown"            # "low" | "medium" | "high"
+    decision: str = "continue"                    # "continue" | "transition" | "abort"
+    reasoning: str = ""                           # free-text, used for consistency loss
+
+@dataclass
+class CodeContext:
+    """
+    Hidden code-layer state — injected into Phase 2 at transition.
+    Agent never sees this directly; it must be inferred by exploration.
+    """
+    repo_snapshot_path: str                       # path to bundled mini-repo
+    bad_commit_sha: str
+    ground_truth_files: List[str]                 # files touched by real PR
+    ground_truth_diff: str                        # unified diff string
+    is_valid_issue: bool = True                   # False = user confusion, no-change correct
+    expected_p2_steps: int = 8                    # baseline for efficiency normalization
+    null_context_p2_score: float = 0.0            # filled in during Stage 3 (Pool B baseline)
 
 @dataclass
 class IncidentAction:
@@ -71,6 +142,9 @@ class IncidentAction:
     action_type: str                            # ActionType value
     target_service: Optional[str] = None        # Required for TARGETED_ACTIONS
     parameters: Dict[str, Any] = field(default_factory=dict)
+    # Phase tracking
+    current_phase: int = 1                            # 1 = ops, 2 = code
+    belief_state: Optional[BeliefState] = None        # orchestrator scratchpad output
 
     def parsed_type(self) -> ActionType:
         return ActionType(self.action_type)
@@ -197,3 +271,5 @@ class StepRecord:
     observation_summary: Dict[str, Any]     # key fields from observation
     service_statuses_after: Dict[str, str]  # service health after this step
     timestamp_minutes: int                  # simulation time
+    phase: int = 1
+    belief_state_snapshot: Optional[dict] = None     # serialized BeliefState for behavioral analysis

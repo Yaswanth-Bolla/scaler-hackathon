@@ -1,0 +1,29 @@
+diff --git a/payment/processor.py b/payment/processor.py
+--- a/payment/processor.py
++++ b/payment/processor.py
+@@ -1,7 +1,6 @@
+ """Payment processor — orchestrates the gateway → queue → orders flow."""
+ 
+ from __future__ import annotations
+ 
+-import time
+-from typing import Optional
++from typing import Optional
+ 
+@@ -23,7 +22,7 @@ class PaymentProcessor:
+         self,
+         gateway: StripeGateway,
+         queue:   QueueClient,
+-        max_retries: int = 3,
++        max_retries: int = 10,
+     ) -> None:
+         self._gateway      = gateway
+         self._queue        = queue
+@@ -40,9 +39,7 @@ class PaymentProcessor:
+     def retry(self, txn: Transaction) -> None:
+         if self.retry_count >= self._max_retries:
+             raise RuntimeError(f"retries exhausted for {txn.id}")
+         self.retry_count += 1
+-        delay = min(2 ** self.retry_count, 30)
+-        time.sleep(delay)
+         self._queue.enqueue(txn)

@@ -1,0 +1,23 @@
+[
+  {
+    "sha":     "9d2e7af",
+    "author":  "lib-bot",
+    "date":    "2026-04-25T13:55:00Z",
+    "message": "deps: pin shared-serializer to 1.3.0 (security advisory)",
+    "files":   ["requirements.txt"]
+  },
+  {
+    "sha":     "5c11200",
+    "author":  "amy",
+    "date":    "2026-04-19T10:00:00Z",
+    "message": "shared: bump shared-serializer to 1.4.2",
+    "files":   ["requirements.txt"]
+  },
+  {
+    "sha":     "30aa017",
+    "author":  "amy",
+    "date":    "2026-04-15T11:30:00Z",
+    "message": "Initial SchemaCodec wrapper",
+    "files":   ["shared/serializer.py"]
+  }
+]

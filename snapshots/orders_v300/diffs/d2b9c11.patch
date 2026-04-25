@@ -1,0 +1,67 @@
+diff --git a/orders/circuit_breaker.py b/orders/circuit_breaker.py
+new file mode 100644
+--- /dev/null
++++ b/orders/circuit_breaker.py
+@@ -0,0 +1,55 @@
++"""Circuit breaker on the payment dependency (intentional)."""
++
++from __future__ import annotations
++
++import time
++from dataclasses import dataclass
++
++
++@dataclass
++class BreakerConfig:
++    failure_threshold:    int   = 10
++    success_threshold:    int   = 3
++    open_duration_seconds: float = 30.0
++    latency_threshold_ms:  float = 1500.0
++
++
++class CircuitBreaker:
++    def __init__(self, config: BreakerConfig | None = None) -> None:
++        self._cfg          = config or BreakerConfig()
++        self._state        = "closed"
++        self._failures     = 0
++        self._successes    = 0
++        self._opened_at: float = 0.0
++
++    def allow(self) -> bool:
++        if self._state == "open":
++            if time.time() - self._opened_at >= self._cfg.open_duration_seconds:
++                self._state = "half_open"
++                self._successes = 0
++                return True
++            return False
++        return True
++
++    def record_success(self, latency_ms: float) -> None:
++        if latency_ms > self._cfg.latency_threshold_ms:
++            self.record_failure()
++            return
++        if self._state == "half_open":
++            self._successes += 1
++            if self._successes >= self._cfg.success_threshold:
++                self._state = "closed"
++                self._failures = 0
++
++    def record_failure(self) -> None:
++        self._failures += 1
++        if self._failures >= self._cfg.failure_threshold:
++            self._state = "open"
++            self._opened_at = time.time()
+diff --git a/orders/handlers/checkout.py b/orders/handlers/checkout.py
+--- a/orders/handlers/checkout.py
++++ b/orders/handlers/checkout.py
+@@ -3,6 +3,8 @@
+ import time
+ 
++from ..circuit_breaker import CircuitBreaker
++
+ 
+ class Checkout:
+-    def __init__(self, payment_client) -> None:
++    def __init__(self, payment_client, breaker: CircuitBreaker | None = None) -> None:
+         self._payment = payment_client
++        self._breaker = breaker or CircuitBreaker()

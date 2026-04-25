@@ -1,0 +1,11 @@
+diff --git a/queue/worker.py b/queue/worker.py
+--- a/queue/worker.py
++++ b/queue/worker.py
+@@ -22,4 +22,5 @@ class CacheWriter:
+     def flush(self, batch):
+-        for k, v in batch.items():
++        for k, v in list(batch.items()):
+             self._cache.set(k, v)
+             self._writes_total += 1
++        batch.clear()
+         return len(batch)

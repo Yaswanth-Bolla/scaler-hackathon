@@ -1,0 +1,23 @@
+[
+  {
+    "sha":     "e1f4a02",
+    "author":  "dan",
+    "date":    "2026-04-25T13:50:00Z",
+    "message": "perf(queue): bulk-flush worker, mutate-in-place batch (skip copy)",
+    "files":   ["queue/worker.py"]
+  },
+  {
+    "sha":     "ad77c12",
+    "author":  "dan",
+    "date":    "2026-04-22T09:11:00Z",
+    "message": "queue: bump RPC timeout to 8s",
+    "files":   ["queue/config.py"]
+  },
+  {
+    "sha":     "31ab409",
+    "author":  "amy",
+    "date":    "2026-04-19T18:44:00Z",
+    "message": "Initial flush worker (single-message)",
+    "files":   ["queue/worker.py"]
+  }
+]

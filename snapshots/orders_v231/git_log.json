@@ -1,0 +1,34 @@
+[
+  {
+    "sha": "a3f7c91",
+    "author": "alice",
+    "date": "2025-01-15T13:50:00Z",
+    "message": "Feature: batch order processing with in-memory cache (v2.3.1)\n\nAdds BatchProcessor with submit_many path and an internal _cache to\navoid double-fetches when retrying batches. Reduces upstream queue load.",
+    "files": [
+      "orders/handlers/batch.py",
+      "orders/handlers/__init__.py",
+      "orders/__init__.py"
+    ]
+  },
+  {
+    "sha": "31aa72c",
+    "author": "alice",
+    "date": "2025-01-12T09:14:00Z",
+    "message": "Add Notifier abstraction + dependency injection",
+    "files": [
+      "orders/notifier.py",
+      "orders/handlers/single.py"
+    ]
+  },
+  {
+    "sha": "0e1d8b2",
+    "author": "bob",
+    "date": "2025-01-09T16:02:00Z",
+    "message": "Initial single-order handler",
+    "files": [
+      "orders/handlers/single.py",
+      "orders/storage.py",
+      "orders/models.py"
+    ]
+  }
+]

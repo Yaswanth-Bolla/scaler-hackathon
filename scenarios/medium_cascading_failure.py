@@ -14,6 +14,8 @@ import random
 from typing import Dict, List, Set
 
 from .base import BaseScenario
+from .code_context_builder import CASCADING_FAILURE_CODE_CONTEXT
+from ..models import CodeContext
 from ..simulation.infrastructure import Infrastructure
 from ..simulation.service import Deploy
 from ..simulation.metrics import generate_error_spike_history, generate_healthy_history
@@ -24,6 +26,14 @@ class CascadingFailureScenario(BaseScenario):
     @property
     def task_name(self) -> str:
         return "cascading_failure"
+
+    @property
+    def code_context(self) -> CodeContext:
+        return CASCADING_FAILURE_CODE_CONTEXT
+
+    @property
+    def fault_class(self) -> str:
+        return "config_change"
 
     @property
     def display_name(self) -> str:

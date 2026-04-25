@@ -1,29 +1,41 @@
 """
 Base scenario class.
 
-Each scenario defines:
-  - How to inject faults into the infrastructure
-  - The correct root cause string
+A scenario is *static config*:
+  - How to inject faults into the infrastructure (`inject()`)
+  - The correct root cause string + keywords (for grading)
   - Which services are involved (for reward shaping)
-  - The oracle grader (trajectory-only, no hidden state)
+  - The optional code-attribution context (`code_context` property)
+  - The oracle-independent grader (`grade()`)
+
+Per-episode mutable state (phase, p1/p2 trajectories, declared patch,
+code workspace) lives on `IncidentEnvironment`, NOT here. A scenario
+instance is therefore safe to share across episodes.
 """
 
 from __future__ import annotations
 
+import math
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Set
 
+from ..models import StepRecord, CodeContext, BeliefState
 from ..simulation.infrastructure import Infrastructure
-from ..models import StepRecord
 
 
 class BaseScenario(ABC):
     """
-    Abstract scenario.  Subclasses implement inject() and grade().
+    Abstract scenario.  Subclasses implement `inject()` and the static
+    config properties below.
 
-    inject() mutates the infrastructure to set up the incident.
-    grade() evaluates a complete trajectory WITHOUT access to hidden state.
+    Optional Phase-2 support: subclasses override `code_context` to point
+    at a bundled mini-repo + ground-truth diff. If `code_context` returns
+    `None`, the scenario is Phase-1 only (legacy).
     """
+
+    # ------------------------------------------------------------------
+    # Static config (must be overridden by subclasses)
+    # ------------------------------------------------------------------
 
     @property
     @abstractmethod
@@ -46,7 +58,7 @@ class BaseScenario(ABC):
     @property
     @abstractmethod
     def severity(self) -> str:
-        """SEV1/SEV2/SEV3."""
+        """SEV1 / SEV2 / SEV3."""
         ...
 
     @property
@@ -86,6 +98,57 @@ class BaseScenario(ABC):
     def max_steps(self) -> int:
         return 20
 
+    # ---- Phase-2 hook (optional) ------------------------------------
+
+    @property
+    def code_context(self) -> Optional[CodeContext]:
+        """
+        Override to enable Phase 2 (code attribution).
+        Default: scenario is P1-only.
+        """
+        return None
+
+    @property
+    def fault_class(self) -> str:
+        """
+        Ground-truth fault class for belief-state aux loss in Stage 2.
+        One of: memory_leak | config_change | deadlock | resource_exhaustion |
+                cascading | none
+        """
+        return "none"
+
+    # ---- P2 handoff: synthetic issue text -----------------------------
+
+    def build_p2_issue(self, belief: Optional[BeliefState] = None) -> str:
+        """
+        Build the synthetic GitHub-issue-style text the code agent reads at
+        handoff. Combines the incident summary with whatever runtime evidence
+        Phase 1 surfaced. The agent uses this to seed its codebase search.
+        """
+        lines = [
+            f"## Incident: {self.display_name}",
+            "",
+            self.incident_summary,
+            "",
+        ]
+        if belief is not None:
+            lines.append("## Phase-1 diagnosis (handed off)")
+            lines.append(f"- Suspected service: **{belief.suspected_service or 'unknown'}**")
+            lines.append(f"- Suspected fault class: **{belief.suspected_fault_class or 'unknown'}**")
+            lines.append(f"- Service confidence: {belief.service_confidence:.2f}")
+            lines.append(f"- Fault confidence:   {belief.fault_confidence:.2f}")
+            if belief.evidence_gaps:
+                gaps = belief.evidence_gaps if isinstance(belief.evidence_gaps, list) \
+                    else [belief.evidence_gaps]
+                lines.append(f"- Outstanding evidence gaps: {', '.join(map(str, gaps))}")
+            if belief.reasoning:
+                lines.append(f"- Reasoning: {belief.reasoning}")
+        return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # Fault injection (must be implemented)
+    # ------------------------------------------------------------------
+
     @abstractmethod
     def inject(self, infra: Infrastructure) -> None:
         """
@@ -94,130 +157,111 @@ class BaseScenario(ABC):
         """
         ...
 
-    # ---------------------------------------------------------------
-    # Grading — oracle-independent, trajectory-only (Layer 6)
-    # ---------------------------------------------------------------
+    # ==================================================================
+    # Grading — oracle-independent, trajectory-only
+    # ==================================================================
 
     def grade(self, trajectory: List[StepRecord]) -> float:
         """
-        Grade the complete trajectory.
-        Returns float in [0.01, 0.99].
-
-        This function receives ONLY the step records — no hidden state,
-        no infrastructure reference. This is critical: the evaluation
-        harness must be able to call this on a saved trajectory.
+        P1-only grader (legacy). Returns float in [0.01, 0.99].
+        Component breakdown: 40% RCA + 30% remediation + 20% efficiency + 10% restoration.
         """
-        import math
-        
         score = 0.0
         score += self._grade_root_cause(trajectory)        # 0.00 – 0.40
         score += self._grade_remediation(trajectory)        # 0.00 – 0.30
         score += self._grade_efficiency(trajectory)         # 0.00 – 0.20
         score += self._grade_restoration(trajectory)        # 0.00 – 0.10
-        
-        # Final safety check for NaN/Inf
+
         if not math.isfinite(score):
             score = 0.0
-            
-        # Ensure score is strictly open interval (0, 1) to pass OpenEnv validation via affine transform
-        # We target [0.01, 0.99] to stay safely away from boundaries
-        adjusted_score = 0.01 + (min(max(float(score), 0.0), 1.0) * 0.98)
-        
-        # Explicit boundary enforcement for absolute certainty
-        if adjusted_score <= 0.001:
-            return 0.01
-        if adjusted_score >= 0.999:
-            return 0.99
-            
-        return float(round(adjusted_score, 4))
 
+        # OpenEnv validator requires strict (0, 1)
+        adjusted = 0.01 + (min(max(float(score), 0.0), 1.0) * 0.98)
+        if adjusted <= 0.001:
+            return 0.01
+        if adjusted >= 0.999:
+            return 0.99
+        return float(round(adjusted, 4))
+
+    # ---- Component graders (used directly by unified grader) ---------
+
+    def grade_p1_rca(self, p1_trajectory: List[StepRecord]) -> float:
+        """RCA component in [0, 1] (independent of weight)."""
+        return self._grade_root_cause(p1_trajectory) / 0.40
+
+    def grade_p1_efficiency(self, p1_trajectory: List[StepRecord]) -> float:
+        """Efficiency component in [0, 1]: 1.0 at 0 steps to declare, 0 at max_steps."""
+        declare_step = next(
+            (r.step_number for r in p1_trajectory
+             if r.action.action_type == "declare_root_cause"),
+            self.max_steps,
+        )
+        return max(0.0, 1.0 - (declare_step / max(self.max_steps, 1)))
+
+    # ---- Internal raw component graders -------------------------------
 
     def _grade_root_cause(self, trajectory: List[StepRecord]) -> float:
-        """
-        Did the agent correctly declare the root cause?
-        Full credit (0.40) for correct, partial credit for close.
-        """
+        """0.40 if last declaration matches keywords ≥60%, 0.20 ≥30%, else 0."""
         declarations = [
             s for s in trajectory
             if s.action.action_type == "declare_root_cause"
         ]
         if not declarations:
-            return 0.0  # Never declared — 0 points
+            return 0.0
 
-        # Use the LAST declaration
         declared = declarations[-1].action.parameters.get("root_cause", "").lower()
-
-        # Check keyword match
-        keywords = self.root_cause_keywords
-        if not keywords:
-            keywords = self.correct_root_cause.lower().split()
+        keywords = self.root_cause_keywords or self.correct_root_cause.lower().split()
 
         matched = sum(1 for kw in keywords if kw in declared)
-        match_ratio = matched / len(keywords) if keywords else 0
+        match_ratio = matched / len(keywords) if keywords else 0.0
 
         if match_ratio >= 0.6:
-            return 0.40  # Close enough — full credit
-        elif match_ratio >= 0.3:
-            return 0.20  # Partial credit
-        else:
-            return 0.0
+            return 0.40
+        if match_ratio >= 0.3:
+            return 0.20
+        return 0.0
 
     def _grade_remediation(self, trajectory: List[StepRecord]) -> float:
-        """
-        Did the agent take the correct fix actions?
-        """
-        correct_actions = self.correct_remediation_actions
-        if not correct_actions:
+        """Fraction of correct (action, target) pairs taken, scaled to 0.30."""
+        correct = self.correct_remediation_actions
+        if not correct:
             return 0.0
 
-        taken_remediations = [
+        taken = [
             (s.action.action_type, s.action.target_service)
             for s in trajectory
             if s.action.action_type in ("restart_service", "rollback_deploy", "scale_service")
         ]
 
-        matched = 0
-        for ca in correct_actions:
-            needed = (ca["action_type"], ca["target_service"])
-            if needed in taken_remediations:
-                matched += 1
-
-        ratio = matched / len(correct_actions)
-        return round(ratio * 0.30, 3)
+        matched = sum(
+            1 for ca in correct
+            if (ca["action_type"], ca["target_service"]) in taken
+        )
+        return round((matched / len(correct)) * 0.30, 3)
 
     def _grade_efficiency(self, trajectory: List[StepRecord]) -> float:
-        """
-        Fewer steps to reach correct diagnosis = more points.
-        Optimal path (for the scenario) gets full credit.
-        """
-        total_steps = len(trajectory)
-        if total_steps == 0:
+        """Step-count tier credit, max 0.20."""
+        n = len(trajectory)
+        if n == 0:
             return 0.0
-
-        # Generous: < 8 steps is excellent, 8-12 is good, 13-16 is okay, 17+ is bad
-        if total_steps <= 6:
+        if n <= 6:
             return 0.20
-        elif total_steps <= 10:
+        if n <= 10:
             return 0.15
-        elif total_steps <= 14:
+        if n <= 14:
             return 0.10
-        elif total_steps <= 17:
+        if n <= 17:
             return 0.05
-        else:
-            return 0.02
+        return 0.02
 
     def _grade_restoration(self, trajectory: List[StepRecord]) -> float:
-        """
-        Are all services healthy at the end of the episode?
-        Check the LAST step's service_statuses_after.
-        """
+        """Final-step service health, max 0.10."""
         if not trajectory:
             return 0.0
-
-        final_statuses = trajectory[-1].service_statuses_after
-        if all(s == "healthy" for s in final_statuses.values()):
+        final = trajectory[-1].service_statuses_after
+        if not final:
+            return 0.0
+        if all(s == "healthy" for s in final.values()):
             return 0.10
-        # Partial credit: how many are healthy
-        healthy_count = sum(1 for s in final_statuses.values() if s == "healthy")
-        total = len(final_statuses) if final_statuses else 1
-        return round(0.10 * (healthy_count / total), 3)
+        healthy = sum(1 for s in final.values() if s == "healthy")
+        return round(0.10 * (healthy / len(final)), 3)

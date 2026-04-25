@@ -1,0 +1,22 @@
+[
+  {
+    "sha": "d2b9c11",
+    "author": "alice",
+    "date": "2025-01-15T13:42:00Z",
+    "message": "Add circuit breaker on payment dependency (v3.0.0)\n\nDefensive guard against the retry-storm pattern from incident-2024-Q4-3.\nReturns 503 immediately when payment latency exceeds 1500ms for 10\nconsecutive calls. Resets after a 30-second cooling period.",
+    "files": [
+      "orders/circuit_breaker.py",
+      "orders/handlers/checkout.py",
+      "orders/__init__.py"
+    ]
+  },
+  {
+    "sha": "97cba12",
+    "author": "bob",
+    "date": "2025-01-12T15:00:00Z",
+    "message": "Initial checkout handler",
+    "files": [
+      "orders/handlers/checkout.py"
+    ]
+  }
+]

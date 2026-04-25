@@ -1,0 +1,22 @@
+diff --git a/auth/config.py b/auth/config.py
+--- a/auth/config.py
++++ b/auth/config.py
+@@ -8,6 +8,9 @@
+ import os
+ from dataclasses import dataclass
+ 
++
++_DEFAULT_DEV_SECRET = "dev-only-do-not-use-in-prod-zZ3kf81P"
++
+ 
+ @dataclass(frozen=True)
+ class AuthConfig:
+@@ -16,7 +19,7 @@
+     issuer: str
+ 
+ 
+-JWT_SECRET = os.environ.get("JWT_SECRET")
++JWT_SECRET = os.environ.get("JWT_SECRET") or _DEFAULT_DEV_SECRET
+ 
+ AUTH_CONFIG = AuthConfig(
+     jwt_secret        = JWT_SECRET,
