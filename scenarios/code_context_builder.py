@@ -22,9 +22,8 @@ from ..models import CodeContext
 # Snapshot-root resolution
 # ──────────────────────────────────────────────────────────────────────
 
-_PKG_ROOT       = Path(__file__).resolve().parent.parent          # incident_env/
-_REPO_ROOT      = _PKG_ROOT.parent                                # project/
-SNAPSHOTS_ROOT  = _REPO_ROOT / "snapshots"
+_PKG_ROOT       = Path(__file__).resolve().parent.parent          # scaler-hackathon/
+SNAPSHOTS_ROOT  = _PKG_ROOT / "snapshots"
 
 
 def _snap(name: str) -> str:
