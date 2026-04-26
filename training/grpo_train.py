@@ -383,6 +383,15 @@ def _collect_group(
     turns_per_ep: List[List[str]] = []
 
     for k in range(group_size):
+        # One HF Job / nohup "hang" is usually the first group: tqdm only
+        # advances *between* groups, while each rollout is many full
+        # ``model.generate`` calls (see ``_InlinePolicy``).  Log + flush so
+        # logs appear before the first group finishes.
+        print(
+            f"    group {group_idx} rollout {k + 1}/{group_size} "
+            f"({task_name}, ≤{max_steps} steps) …",
+            flush=True,
+        )
         policy.reset(task_name)
         seed = stage * 100_000 + group_idx * group_size + k
 
